@@ -1,28 +1,27 @@
 #!/usr/bin/env bash
 
 # =========================================================
-# HVM PANEL V8 ULTRA INSTALLER
+# HVM PANEL V8 UNIVERSAL INSTALLER
 # FILE NAME: install.sh
-# PANEL FILE: hvm.bin
+# PANEL BINARY: hvm.bin
 # PORT: 5000
 # USERNAME: admin
 # PASSWORD: admin
 # =========================================================
 
-set -euo pipefail
+clear
 
 # =========================================================
 # COLORS
 # =========================================================
 
-RED="\e[1;31m"
-GREEN="\e[1;32m"
-YELLOW="\e[1;33m"
-BLUE="\e[1;34m"
-CYAN="\e[1;36m"
-MAGENTA="\e[1;35m"
-WHITE="\e[1;37m"
-NC="\e[0m"
+RED='\033[1;31m'
+GREEN='\033[1;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+CYAN='\033[1;36m'
+WHITE='\033[1;37m'
+NC='\033[0m'
 
 # =========================================================
 # VARIABLES
@@ -33,271 +32,176 @@ HVM_URL="https://download1583.mediafire.com/3z0i8stqa1zgNI9x-OrcdR3dS3wM6AkEYnMm
 INSTALL_DIR="/opt/hvm"
 SERVICE_NAME="hvm"
 PANEL_PORT="5000"
-BIN_FILE="${INSTALL_DIR}/hvm.bin"
-LOG_FILE="/var/log/hvm.log"
-
-# =========================================================
-# UI FUNCTIONS
-# =========================================================
-
-line() {
-    echo -e "${MAGENTA}============================================================${NC}"
-}
-
-info() {
-    echo -e "${CYAN}[INFO]${NC} $1"
-}
-
-ok() {
-    echo -e "${GREEN}[OK]${NC} $1"
-}
-
-warn() {
-    echo -e "${YELLOW}[WARNING]${NC} $1"
-}
-
-error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-spinner() {
-    local pid=$1
-    local delay=0.08
-    local spin='⠋⠙⠸⠴⠦⠇'
-
-    while ps -p $pid > /dev/null 2>&1; do
-        for i in $(seq 0 5); do
-            printf "\r${CYAN}%s${NC} " "${spin:$i:1}"
-            sleep $delay
-        done
-    done
-
-    printf "\r"
-}
 
 # =========================================================
 # LOGO
 # =========================================================
 
-clear
-
 echo -e "${CYAN}"
 
 cat << "EOF"
 
-  _    _  __      __  __  __              _____               _   _   ______   _      
- | |  | | \ \    / / |  \/  |            |  __ \      /\     | \ | | |  ____| | |     
- | |__| |  \ \  / /  | \  / |   ______   | |__) |    /  \    |  \| | | |__    | |     
- |  __  |   \ \/ /   | |\/| |  |______|  |  ___/    / /\ \   | . ` | |  __|   | |     
- | |  | |    \  /    | |  | |            | |       / ____ \  | |\  | | |____  | |____ 
- |_|  |_|     \/     |_|  |_|            |_|      /_/    \_\ |_| \_| |______| |______|
-                                                                                      
-                                                                                      
+██╗  ██╗██╗   ██╗███╗   ███╗
+██║  ██║██║   ██║████╗ ████║
+███████║██║   ██║██╔████╔██║
+██╔══██║╚██╗ ██╔╝██║╚██╔╝██║
+██║  ██║ ╚████╔╝ ██║ ╚═╝ ██║
+╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝
 
-        HVM PANEL V8 ULTRA INSTALLER
+        HVM PANEL V8 UNIVERSAL INSTALLER
 
 EOF
 
 echo -e "${NC}"
 
-line
+sleep 2
 
 # =========================================================
 # ROOT CHECK
 # =========================================================
 
-if [[ "$EUID" -ne 0 ]]; then
-    error "Please run this installer as root."
+if [ "$(id -u)" != "0" ]; then
+    echo -e "${RED}[ERROR] Please run this installer as root.${NC}"
     exit 1
 fi
+
+# =========================================================
+# ARCH CHECK
+# =========================================================
+
+ARCH=$(uname -m)
+
+echo -e "${BLUE}[INFO] Detected Architecture:${NC} $ARCH"
 
 # =========================================================
 # OS DETECTION
 # =========================================================
 
-if [[ -f /etc/os-release ]]; then
-    source /etc/os-release
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
     DISTRO=$ID
     VERSION=$VERSION_ID
 else
-    error "Unable to detect operating system."
+    echo -e "${RED}[ERROR] Cannot detect operating system.${NC}"
     exit 1
 fi
 
-ARCH=$(uname -m)
-
-info "Detected OS: ${PRETTY_NAME}"
-info "Architecture: ${ARCH}"
-
-line
+echo -e "${BLUE}[INFO] Detected OS:${NC} $PRETTY_NAME"
 
 # =========================================================
-# PACKAGE INSTALL
+# PACKAGE MANAGER DETECTION
 # =========================================================
 
-install_packages() {
+install_deps() {
 
-    info "Installing required dependencies..."
+    echo -e "${CYAN}[INFO] Installing required packages...${NC}"
 
     if command -v apt >/dev/null 2>&1; then
 
-        export DEBIAN_FRONTEND=noninteractive
-
-        apt update -y >/dev/null 2>&1
-
+        apt update -y
         apt install -y \
         wget curl unzip tar sudo nano \
         python3 python3-pip \
-        net-tools lsof ca-certificates \
-        gnupg software-properties-common \
-        >/dev/null 2>&1
+        net-tools lsof ca-certificates
 
     elif command -v dnf >/dev/null 2>&1; then
 
+        dnf update -y
         dnf install -y \
         wget curl unzip tar sudo nano \
         python3 python3-pip \
-        net-tools lsof ca-certificates \
-        >/dev/null 2>&1
+        net-tools lsof ca-certificates
 
     elif command -v yum >/dev/null 2>&1; then
 
-        yum install -y epel-release >/dev/null 2>&1
-
+        yum update -y
+        yum install -y epel-release
         yum install -y \
         wget curl unzip tar sudo nano \
         python3 python3-pip \
-        net-tools lsof ca-certificates \
-        >/dev/null 2>&1
+        net-tools lsof ca-certificates
+
+    elif command -v apk >/dev/null 2>&1; then
+
+        apk update
+        apk add \
+        wget curl unzip tar sudo nano \
+        python3 py3-pip \
+        net-tools lsof ca-certificates
 
     elif command -v pacman >/dev/null 2>&1; then
 
         pacman -Sy --noconfirm \
         wget curl unzip tar sudo nano \
         python python-pip \
-        net-tools lsof ca-certificates \
-        >/dev/null 2>&1
-
-    elif command -v apk >/dev/null 2>&1; then
-
-        apk update >/dev/null 2>&1
-
-        apk add \
-        wget curl unzip tar sudo nano \
-        python3 py3-pip \
-        net-tools lsof ca-certificates \
-        >/dev/null 2>&1
+        net-tools lsof ca-certificates
 
     elif command -v zypper >/dev/null 2>&1; then
 
-        zypper refresh >/dev/null 2>&1
-
+        zypper refresh
         zypper install -y \
         wget curl unzip tar sudo nano \
         python3 python3-pip \
-        net-tools lsof ca-certificates \
-        >/dev/null 2>&1
+        net-tools lsof ca-certificates
 
     else
-        error "Unsupported Linux distribution."
+        echo -e "${RED}[ERROR] Unsupported package manager.${NC}"
         exit 1
     fi
 
-    ok "Dependencies installed successfully."
+    echo -e "${GREEN}[OK] Dependencies installed.${NC}"
 }
 
-install_packages
-
-line
-
-# =========================================================
-# CHECK PORT
-# =========================================================
-
-if lsof -Pi :${PANEL_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
-    warn "Port ${PANEL_PORT} is already in use."
-
-    echo
-    lsof -i:${PANEL_PORT}
-    echo
-
-    read -rp "Continue installation anyway? (y/n): " PORT_CONFIRM
-
-    if [[ "$PORT_CONFIRM" != "y" ]]; then
-        error "Installation cancelled."
-        exit 1
-    fi
-fi
+install_deps
 
 # =========================================================
 # CREATE INSTALL DIRECTORY
 # =========================================================
 
-info "Preparing installation directory..."
+echo -e "${CYAN}[INFO] Creating HVM directory...${NC}"
 
-mkdir -p "${INSTALL_DIR}"
-
-cd "${INSTALL_DIR}"
-
-ok "Directory ready."
-
-line
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR" || exit 1
 
 # =========================================================
-# DOWNLOAD HVM
+# DOWNLOAD HVM BINARY
 # =========================================================
 
-info "Downloading hvm.bin..."
+echo -e "${CYAN}[INFO] Downloading hvm.bin...${NC}"
 
 rm -f hvm.bin
 
-(
-wget -q --show-progress -O hvm.bin "${HVM_URL}"
-) &
+wget --progress=bar:force -O hvm.bin "$HVM_URL"
 
-spinner $!
-
-echo
-
-if [[ ! -f hvm.bin ]]; then
-    error "Download failed."
-    exit 1
-fi
-
-if [[ ! -s hvm.bin ]]; then
-    error "Downloaded file is empty."
+if [ ! -f hvm.bin ]; then
+    echo -e "${RED}[ERROR] Failed to download hvm.bin${NC}"
     exit 1
 fi
 
 chmod +x hvm.bin
 
-ok "hvm.bin downloaded successfully."
-
-line
+echo -e "${GREEN}[OK] hvm.bin downloaded successfully.${NC}"
 
 # =========================================================
-# FIREWALL
+# FIREWALL CONFIG
 # =========================================================
 
-info "Configuring firewall rules..."
+echo -e "${CYAN}[INFO] Configuring firewall...${NC}"
 
 if command -v ufw >/dev/null 2>&1; then
-    ufw allow ${PANEL_PORT}/tcp >/dev/null 2>&1 || true
+    ufw allow ${PANEL_PORT}/tcp >/dev/null 2>&1
 fi
 
 if command -v firewall-cmd >/dev/null 2>&1; then
-    firewall-cmd --permanent --add-port=${PANEL_PORT}/tcp >/dev/null 2>&1 || true
-    firewall-cmd --reload >/dev/null 2>&1 || true
+    firewall-cmd --permanent --add-port=${PANEL_PORT}/tcp >/dev/null 2>&1
+    firewall-cmd --reload >/dev/null 2>&1
 fi
 
 if command -v iptables >/dev/null 2>&1; then
-    iptables -C INPUT -p tcp --dport ${PANEL_PORT} -j ACCEPT >/dev/null 2>&1 || \
-    iptables -I INPUT -p tcp --dport ${PANEL_PORT} -j ACCEPT >/dev/null 2>&1 || true
+    iptables -I INPUT -p tcp --dport ${PANEL_PORT} -j ACCEPT >/dev/null 2>&1
 fi
 
-ok "Firewall configured."
-
-line
+echo -e "${GREEN}[OK] Firewall configured.${NC}"
 
 # =========================================================
 # SYSTEMD SERVICE
@@ -305,79 +209,63 @@ line
 
 if command -v systemctl >/dev/null 2>&1; then
 
-    info "Creating systemd service..."
+echo -e "${CYAN}[INFO] Creating systemd service...${NC}"
 
-cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
+cat > /etc/systemd/system/${SERVICE_NAME}.service <<EOF
 [Unit]
 Description=HVM Panel V8
-After=network-online.target
-Wants=network-online.target
+After=network.target
 
 [Service]
 Type=simple
 WorkingDirectory=${INSTALL_DIR}
-ExecStart=${BIN_FILE}
+ExecStart=${INSTALL_DIR}/hvm.bin
 Restart=always
-RestartSec=5
-LimitNOFILE=1048576
+RestartSec=3
+LimitNOFILE=999999
 User=root
-StandardOutput=append:${LOG_FILE}
-StandardError=append:${LOG_FILE}
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-    systemctl daemon-reload
-    systemctl enable ${SERVICE_NAME} >/dev/null 2>&1
-    systemctl restart ${SERVICE_NAME}
+systemctl daemon-reload
+systemctl enable ${SERVICE_NAME} >/dev/null 2>&1
+systemctl restart ${SERVICE_NAME}
 
-    sleep 5
-
-    if systemctl is-active --quiet ${SERVICE_NAME}; then
-        ok "HVM service started successfully."
-    else
-        error "Service failed to start."
-        echo
-        systemctl status ${SERVICE_NAME} --no-pager
-        echo
-        exit 1
-    fi
+echo -e "${GREEN}[OK] Systemd service created.${NC}"
 
 else
 
-    warn "Systemd not found. Running manually..."
+echo -e "${YELLOW}[WARNING] systemd not detected.${NC}"
+echo -e "${YELLOW}[WARNING] Starting HVM manually in background...${NC}"
 
-    nohup ${BIN_FILE} >> ${LOG_FILE} 2>&1 &
-
-    sleep 3
+nohup ${INSTALL_DIR}/hvm.bin > /dev/null 2>&1 &
 
 fi
 
-line
-
 # =========================================================
-# PANEL STATUS
+# CHECK PORT
 # =========================================================
 
-if lsof -Pi :${PANEL_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
-    PANEL_STATUS="${GREEN}ONLINE${NC}"
+sleep 3
+
+PORT_CHECK=$(lsof -i:${PANEL_PORT} | grep LISTEN)
+
+if [ -n "$PORT_CHECK" ]; then
+    PANEL_STATUS="${GREEN}RUNNING${NC}"
 else
     PANEL_STATUS="${RED}OFFLINE${NC}"
 fi
 
 # =========================================================
-# PUBLIC IP
+# GET SERVER IP
 # =========================================================
 
-PUBLIC_IP=$(curl -4 -s --max-time 10 ifconfig.me || true)
+PUBLIC_IP=$(curl -4 -s ifconfig.me)
 
-if [[ -z "${PUBLIC_IP}" ]]; then
+if [ -z "$PUBLIC_IP" ]; then
     PUBLIC_IP=$(hostname -I | awk '{print $1}')
-fi
-
-if [[ -z "${PUBLIC_IP}" ]]; then
-    PUBLIC_IP="YOUR_SERVER_IP"
 fi
 
 # =========================================================
@@ -390,41 +278,33 @@ echo -e "${GREEN}"
 
 cat << EOF
 
-╔══════════════════════════════════════════════════════╗
-║              HVM PANEL V8 INSTALLED                 ║
-╚══════════════════════════════════════════════════════╝
+===========================================================
+                HVM PANEL V8 INSTALLED
+===========================================================
 
-STATUS            : ${PANEL_STATUS}
+STATUS            : $PANEL_STATUS
 
 PANEL URL         : http://${PUBLIC_IP}:${PANEL_PORT}
 
-DEFAULT USERNAME  : admin
-DEFAULT PASSWORD  : admin
+USERNAME          : admin
+PASSWORD          : admin
 
 INSTALL DIRECTORY : ${INSTALL_DIR}
 
-BINARY FILE       : ${BIN_FILE}
-
-LOG FILE          : ${LOG_FILE}
+BINARY FILE       : ${INSTALL_DIR}/hvm.bin
 
 SERVICE NAME      : ${SERVICE_NAME}
 
-════════════════════════════════════════════════════════
+===========================================================
 
-SERVICE COMMANDS
+MANAGEMENT COMMANDS
 
-systemctl start ${SERVICE_NAME}
-systemctl stop ${SERVICE_NAME}
-systemctl restart ${SERVICE_NAME}
-systemctl status ${SERVICE_NAME}
+systemctl start hvm
+systemctl stop hvm
+systemctl restart hvm
+systemctl status hvm
 
-════════════════════════════════════════════════════════
-
-VIEW LIVE LOGS
-
-journalctl -u ${SERVICE_NAME} -f
-
-════════════════════════════════════════════════════════
+===========================================================
 
 EOF
 
