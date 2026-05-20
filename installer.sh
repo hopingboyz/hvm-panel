@@ -23,7 +23,7 @@ NC="\e[0m"
 # VARIABLES
 # =========================================================
 
-HVM_URL="https://files.catbox.moe/rr0uum.bin"
+HVM_URL="https://files.catbox.moe/a7sccx.bin"
 
 INSTALL_DIR="/opt/hvm"
 SERVICE_NAME="hvm"
