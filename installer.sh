@@ -75,7 +75,7 @@ cat << "EOF"
 ██║  ██║ ╚████╔╝ ██║ ╚═╝ ██║
 ╚═╝  ╚═╝  ╚═══╝  ╚═╝     ╚═╝
 
-        HVM PANEL V8 ULTRA INSTALLER
+        HVM PANEL V9 ULTRA INSTALLER
 
 EOF
 
@@ -295,7 +295,7 @@ if command -v systemctl >/dev/null 2>&1; then
 
 cat > /etc/systemd/system/${SERVICE_NAME}.service << EOF
 [Unit]
-Description=HVM Panel V8
+Description=HVM Panel V9
 After=network-online.target
 Wants=network-online.target
 
@@ -378,7 +378,7 @@ echo -e "${GREEN}"
 cat << EOF
 
 ╔══════════════════════════════════════════════════════╗
-║               HVM PANEL V8 INSTALLED                ║
+║               HVM PANEL V9 INSTALLED                ║
 ╚══════════════════════════════════════════════════════╝
 
 STATUS            : ${PANEL_STATUS}
